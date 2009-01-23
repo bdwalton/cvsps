@@ -9,6 +9,11 @@
  * @created Fri Nov  6 14:33:29 1998
  * @version $Revision: 1.9 $$Date: 2001/10/25 18:36:11 $
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
