@@ -3,6 +3,10 @@
  * See COPYING file for license information 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <search.h>

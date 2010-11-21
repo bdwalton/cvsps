@@ -3,6 +3,10 @@
  * See COPYING file for license information 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #ifdef SOLARIS
 #include <strings.h>
 #else
