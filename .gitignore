@@ -13,3 +13,5 @@ missing
 /c++defs.h
 /warn-on-use.h
 Makefile
+config.guess
+config.sub
