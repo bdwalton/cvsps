@@ -144,10 +144,12 @@ char *get_string(char const *str)
 static int get_int_substr(const char * str, const regmatch_t * p)
 {
     char buff[256];
+
     if(p->rm_so == -1)
 	    return 0;
     if(p->rm_eo - p->rm_so >= sizeof(buff))
 	    return 0;
+
     memcpy(buff, str + p->rm_so, p->rm_eo - p->rm_so);
     buff[p->rm_eo - p->rm_so] = 0;
     return atoi(buff);
@@ -186,6 +188,7 @@ void convert_date(time_t * t, const char * dte)
     if (!init_re) 
     {
 	if (regcomp(&date_re, "([0-9]{4})[-/]([0-9]{2})[-/]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})( [-+][0-9]{4})?", REG_EXTENDED)) 
+	if (regcomp(&date_re, "([0-9]{4})[-/]([0-9]{2})[-/]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})", REG_EXTENDED)) 
 	{
 	    fprintf(stderr, "FATAL: date regex compilation error\n");
 	    exit(1);
@@ -197,6 +200,7 @@ void convert_date(time_t * t, const char * dte)
     {
 	regmatch_t * pm = match;
 	struct tm tm = {0};
+
 	char tzbuf[32];
 	int offseth = 0, offsetm = 0;
 

@@ -39,7 +39,8 @@ RCSID("$Id: cvsps.c,v 4.108 2005/06/05 22:52:43 david Exp $");
 
 enum
 {
-    NEED_FILE,
+    NEED_RCS_FILE,
+    NEED_WORKING_FILE,
     NEED_SYMS,
     NEED_EOS,
     NEED_START_LOG,
@@ -118,7 +119,9 @@ static int parse_args(int, char *[]);
 static int parse_rc();
 static void load_from_cvs();
 static void init_paths();
-static CvsFile * parse_file(const char *);
+static CvsFile * build_file_by_name(const char *);
+static CvsFile * parse_rcs_file(const char *);
+static CvsFile * parse_working_file(const char *);
 static CvsFileRevision * parse_revision(CvsFile * file, char * rev_str);
 static void assign_pre_revision(PatchSetMember *, CvsFileRevision * rev);
 static void check_print_patch_set(PatchSet *);
@@ -264,18 +267,25 @@ static void load_from_cvs()
 {
     FILE * cvsfp;
     char buff[BUFSIZ];
-    int state = NEED_FILE;
+    int state = NEED_RCS_FILE;
     CvsFile * file = NULL;
     PatchSetMember * psm = NULL;
     char datebuff[26];
     char authbuff[AUTH_STR_MAX];
-    char logbuff[LOG_STR_MAX + 1];
+    int logbufflen = LOG_STR_MAX + 1;
+    char * logbuff = malloc(logbufflen);
     int loglen = 0;
     int have_log = 0;
     char cmd[BUFSIZ];
     char date_str[64];
     char use_rep_buff[PATH_MAX];
     char * ltype;
+
+    if (logbuff == NULL)
+    {
+	debug(DEBUG_SYSERROR, "could not malloc %d bytes for logbuff in load_from_cvs", logbufflen);
+	exit(1);
+    }
 
     if (!no_rlog && !test_log_file && cvs_check_cap(CAP_HAVE_RLOG))
     {
@@ -302,12 +312,12 @@ static void load_from_cvs()
 	 * which is necessary to fill in the pre_rev stuff for a 
 	 * PatchSetMember
 	 */
-	snprintf(cmd, BUFSIZ, "cvs %s %s %s -d '%s<;%s' %s", compress_arg, norc, ltype, date_str, date_str, use_rep_buff);
+	snprintf(cmd, BUFSIZ, "cvs %s %s -q %s -d '%s<;%s' %s", compress_arg, norc, ltype, date_str, date_str, use_rep_buff);
     }
     else
     {
 	date_str[0] = 0;
-	snprintf(cmd, BUFSIZ, "cvs %s %s %s %s", compress_arg, norc, ltype, use_rep_buff);
+	snprintf(cmd, BUFSIZ, "cvs %s %s -q %s %s", compress_arg, norc, ltype, use_rep_buff);
     }
     
     debug(DEBUG_STATUS, "******* USING CMD %s", cmd);
@@ -343,10 +353,26 @@ static void load_from_cvs()
 
 	switch(state)
 	{
-	case NEED_FILE:
-	    if (strncmp(buff, "RCS file", 8) == 0 && (file = parse_file(buff)))
+	case NEED_RCS_FILE:
+	    if (strncmp(buff, "RCS file", 8) == 0) {
+              if ((file = parse_rcs_file(buff)) != NULL)
 		state = NEED_SYMS;
+              else
+                state = NEED_WORKING_FILE;
+            }
 	    break;
+	case NEED_WORKING_FILE:
+	    if (strncmp(buff, "Working file", 12) == 0) {
+              if ((file = parse_working_file(buff)))
+		state = NEED_SYMS;
+              else
+                state = NEED_RCS_FILE;
+		break;
+	    } else {
+              // Working file come just after RCS file. So reset state if it was not found
+              state = NEED_RCS_FILE;
+            }
+            break;
 	case NEED_SYMS:
 	    if (strncmp(buff, "symbolic names:", 15) == 0)
 		state = NEED_EOS;
@@ -475,7 +501,7 @@ static void load_from_cvs()
 		have_log = 0;
 		psm = NULL;
 		file = NULL;
-		state = NEED_FILE;
+		state = NEED_RCS_FILE;
 	    }
 	    else
 	    {
@@ -484,25 +510,22 @@ static void load_from_cvs()
 		 */
 		if (have_log || !is_revision_metadata(buff))
 		{
-		    /* if the log buffer is full, that's it.  
-		     * 
-		     * Also, read lines (fgets) always have \n in them
-		     * (unless truncation happens)
-		     * which we count on.  So if truncation happens,
-		     * be careful to put a \n on.
-		     * 
-		     * Buffer has LOG_STR_MAX + 1 for room for \0 if
-		     * necessary
-		     */
-		    if (loglen < LOG_STR_MAX)
+		    /* If the log buffer is full, try to reallocate more. */
+		    if (loglen < logbufflen)
 		    {
 			int len = strlen(buff);
 			
-			if (len >= LOG_STR_MAX - loglen)
+			if (len >= logbufflen - loglen)
 			{
-			    debug(DEBUG_APPMSG1, "WARNING: maximum log length exceeded, truncating log");
-			    len = LOG_STR_MAX - loglen;
-			    buff[len - 1] = '\n';
+			    debug(DEBUG_STATUS, "reallocating logbufflen to %d bytes for file %s", logbufflen, file->filename);
+			    logbufflen += (len >= LOG_STR_MAX ? (len+1) : LOG_STR_MAX);
+			    char * newlogbuff = realloc(logbuff, logbufflen);
+			    if (newlogbuff == NULL)
+			    {
+				debug(DEBUG_SYSERROR, "could not realloc %d bytes for logbuff in load_from_cvs", logbufflen);
+				exit(1);
+			    }
+			    logbuff = newlogbuff;
 			}
 
 			debug(DEBUG_STATUS, "appending %s to log", buff);
@@ -529,7 +552,7 @@ static void load_from_cvs()
 	exit(1);
     }
 
-    if (state != NEED_FILE)
+    if (state != NEED_RCS_FILE)
     {
 	debug(DEBUG_APPERROR, "Error: Log file parsing error. (%d)  Use -v to debug", state);
 	exit(1);
@@ -1043,8 +1066,8 @@ static void init_paths()
      *
      * NOTE: because of some bizarre 'feature' in cvs, when 'rlog' is used
      * (instead of log) it gives the 'real' RCS file path, which can be different
-     * from the 'nominal' repository path because of symlinks in the server and 
-     * the like.  See also the 'parse_file' routine
+     * from the 'nominal' repository path because of symlinks in the server and
+     * the like.  See also the 'parse_rcs_file' routine
      */
     strip_path_len = snprintf(strip_path, PATH_MAX, "%s/%s/", p, repository_path);
 
@@ -1057,9 +1080,8 @@ static void init_paths()
     debug(DEBUG_STATUS, "strip_path: %s", strip_path);
 }
 
-static CvsFile * parse_file(const char * buff)
+static CvsFile * parse_rcs_file(const char * buff)
 {
-    CvsFile * retval;
     char fn[PATH_MAX];
     int len = strlen(buff + 10);
     char * p;
@@ -1133,6 +1155,28 @@ static CvsFile * parse_file(const char * buff)
     }
 
     debug(DEBUG_STATUS, "stripped filename %s", fn);
+
+    return build_file_by_name(fn);
+}
+
+static CvsFile * parse_working_file(const char * buff)
+{
+    char fn[PATH_MAX];
+    int len = strlen(buff + 14);
+
+    /* chop the "LF" */
+    len -= 1;
+    memcpy(fn, buff + 14, len);
+    fn[len] = 0;
+
+    debug(DEBUG_STATUS, "working filename %s", fn);
+
+    return build_file_by_name(fn);
+}
+
+static CvsFile * build_file_by_name(const char * fn)
+{
+    CvsFile * retval;
 
     retval = (CvsFile*)get_hash_object(file_hash, fn);
 
@@ -1445,6 +1489,7 @@ static void print_patch_set(PatchSet * ps)
     const char * funk = "";
 
     tm = localtime(&ps->date);
+    next = ps->members.next;
     
     funk = fnk_descr[ps->funk_factor];
     
@@ -1467,10 +1512,10 @@ static void print_patch_set(PatchSet * ps)
 	printf("%s", branch->name);
     }
     printf("\n");
+    next = ps->members.next;
     printf("Log:\n%s\n", ps->descr);
     printf("Members: \n");
 
-    next = ps->members.next;
     while (next != &ps->members)
     {
 	PatchSetMember * psm = list_entry(next, PatchSetMember, link);
@@ -2121,6 +2166,11 @@ static void parse_sym(CvsFile * file, char * sym)
     
     if (!get_branch_ext(rev, eot, &leaf))
     {
+	if (strcmp(tag, "TRUNK") == 0)
+	{
+	    debug(DEBUG_STATUS, "ignoring the TRUNK branch/tag");
+	    return;
+	}
 	debug(DEBUG_APPERROR, "malformed revision");
 	exit(1);
     }
@@ -2408,8 +2458,32 @@ void patch_set_add_member(PatchSet * ps, PatchSetMember * psm)
     for (next = ps->members.next; next != &ps->members; next = next->next) 
     {
 	PatchSetMember * m = list_entry(next, PatchSetMember, link);
-	if (m->file == psm->file && ps->collision_link.next == NULL) 
+	if (m->file == psm->file && ps->collision_link.next == NULL) {
 		list_add(&ps->collision_link, &collisions);
+		int order = compare_rev_strings(psm->post_rev->rev, m->post_rev->rev);
+
+		/*
+		 * Same revision too? Add it to the collision list
+		 * if it isn't already.
+		 */
+		if (!order) {
+			if (ps->collision_link.next == NULL)
+				list_add(&ps->collision_link, &collisions);
+			return;
+		}
+
+		/*
+		 * If this is an older revision than the one we already have
+		 * in this patchset, just ignore it
+		 */
+		if (order < 0)
+			return;
+
+		/*
+		 * This is a newer one, remove the old one
+		 */
+		list_del(&m->link);
+	}
     }
 
     psm->ps = ps;
@@ -2427,6 +2501,11 @@ static void set_psm_initial(PatchSetMember * psm)
 	 */
 	if (psm->ps->branch_add)
 	    debug(DEBUG_APPMSG1, "WARNING: branch_add already set!");
+	/*
+	 * We expect a 'file xyz initially added on branch abc' here.
+	 * There can only be several such member in a given patchset,
+	 * since cvs only includes the file basename in the log message.
+	 */
 	psm->ps->branch_add = 1;
     }
 }
@@ -2600,7 +2679,7 @@ static void determine_branch_ancestor(PatchSet * ps, PatchSet * head_ps)
 	 * note: rev is the pre-commit revision, not the post-commit
 	 */
 	if (!head_ps->ancestor_branch)
-	    d1 = 0;
+	    d1 = -1;
 	else if (strcmp(ps->branch, rev->branch) == 0)
 	    continue;
 	else if (strcmp(head_ps->ancestor_branch, "HEAD") == 0)

@@ -185,20 +185,20 @@ tcp_connect(int sockfd, const char *rem_addr, unsigned short port)
 int
 convert_address(long *dest, const char *addr_str)
 {
-#ifdef LINUX
+#ifdef __linux__
   struct in_addr ip;
 #endif
   int retval = 0;
   char errstr[256];
   
   /* first try converting "numbers and dots" notation */
-#ifdef LINUX
+#ifdef __linux__
   if ( inet_aton(addr_str, &ip) )
   {
     memcpy(dest, &ip.s_addr, sizeof(ip.s_addr));
   }
 #else
-  if ( (*dest = inet_addr(addr_str)) != -1)
+  if ( (*dest = inet_addr(addr_str)) != INADDR_NONE)
   {
     /* nothing */
   }

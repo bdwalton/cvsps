@@ -23,6 +23,7 @@
  */
 
 #include "inline.h"
+#include <stddef.h>
 
 struct list_head {
         struct list_head *next, *prev;
