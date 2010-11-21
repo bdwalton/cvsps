@@ -15,12 +15,13 @@ changes were committed 'atomically' to the repository.
 Compiling.
 ---------
 
-CVSps is a relatively small program, with only a few modules.
-The Makefile is very simple and should work in most GNU type environments.
-Unfortunately, I've only been able to test on Red Hat Linux, so YMMV.  As
-CVSps matures, I'm sure a more sophisticated build environment will evolve
-with it.  For now, just try 'make' and 'make install'.  If you have any 
-problems let me know.
+CVSps is a relatively small program, with only a few modules.  There
+is now a standard autoconf/automake framework in place, so the more
+familiar ./configure && make && make install approach to compiling and
+installing may now be used.  This has been a little bit more widely
+tested now (Ubuntu Linux, Solaris 9) and should still work on the
+originally tested RedHat Linux too.  If you find problems, patches are
+welcome.
 
 Running.
 -------
