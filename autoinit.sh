@@ -1,6 +1,6 @@
 #!/bin/sh
 
-aclocal
-autoconf
+aclocal -I gnulib/m4
+autoconf -I gnulib/m4
 autoheader
 automake --add-missing --foreign
