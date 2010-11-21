@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([cvsps], [2.1])
+AC_INIT([cvsps], [2.2b1])
 AC_CONFIG_SRCDIR([util.h])
 AC_CONFIG_HEADERS([config.h])
 
