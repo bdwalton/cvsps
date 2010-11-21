@@ -72,7 +72,11 @@ AM_INIT_AUTOMAKE(cvsps,2.1)
 
 # Checks for programs.
 AC_PROG_CC
+gl_EARLY
+AC_PROG_RANLIB
 AC_PROG_INSTALL
+
+gl_INIT
 
 # Checks for libraries.
 CHECK_ZLIB()
@@ -93,6 +97,6 @@ AC_FUNC_MALLOC
 AC_FUNC_MKTIME
 AC_CHECK_FUNCS([gethostbyname gettimeofday memmove memset mkdir regcomp setenv socket strchr strdup strerror strrchr strstr strsep tzset])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile gnulib/Makefile])
 AC_OUTPUT
 

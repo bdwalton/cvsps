@@ -9,3 +9,6 @@ Makefile.in
 depcomp
 install-sh
 missing
+/arg-nonnull.h
+/c++defs.h
+/warn-on-use.h
