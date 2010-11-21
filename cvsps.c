@@ -305,7 +305,7 @@ static void load_from_cvs()
     if (cache_date > 0)
     {
 	struct tm * tm = gmtime(&cache_date);
-	strftime(date_str, 64, "%d %b %Y %H:%M:%S %z", tm);
+	strftime(date_str, 64, "%d %b %Y %H:%M:%S +0000", tm);
 
 	/* this command asks for logs using two different date
 	 * arguments, separated by ';' (see man rlog).  The first
