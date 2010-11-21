@@ -16,3 +16,8 @@ Makefile
 config.guess
 config.sub
 *~
+stamp-h1
+config.status
+config.log
+config.h
+.deps/
