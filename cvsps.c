@@ -627,7 +627,7 @@ static int usage(const char * str1, const char * str2)
     debug(DEBUG_APPERROR, "  -q be quiet about warnings");
     debug(DEBUG_APPERROR, "  -A track and report branch ancestry");
     debug(DEBUG_APPERROR, "  <repository> apply cvsps to repository.  overrides working directory");
-    debug(DEBUG_APPERROR, "\ncvsps version %s\n", VERSION);
+    debug(DEBUG_APPERROR, "\ncvsps version %s\n", PACKAGE_VERSION);
 
     return -1;
 }
