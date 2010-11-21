@@ -224,6 +224,19 @@ http://www.cobite.com/cvsps
 Special thanks to my employer Cobite and Robert Lippman, who've given
 me time to develop this tool.
 
+The source you're reading is taken from the unofficial fork of CVSps.
+As the upstream seemed basically dead, I took the liberty of merging
+patches from http://ydirson.free.fr/en/software/scm/cvsps.html and
+some of my own changes (autotools support, gnulib portability support)
+and publishing them for all to use on GitHub.
+
+Although the source builds properly and the resulting binary seems to
+function, I've not done much more testing of this.  I don't actually
+use CVSps myself, but only as a dependency of git, which I package for
+OpenCSW (http://opencsw.org/packages/git).
+
+2010-11-21 Ben Walton <bdwalton@gmail.com>
+
 Known Problems (this will become the FAQ if anyone ever A any Q).
 ----------------------------------------------------------------
 
