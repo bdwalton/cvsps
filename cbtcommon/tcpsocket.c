@@ -36,10 +36,6 @@
 #include "win32fd.h"
 #endif
 
-#ifndef INADDR_NONE
-#define INADDR_NONE ((in_addr_t) 0xffffffff)
-#endif
-
 RCSID("$Id: tcpsocket.c,v 1.6 1999/12/27 20:35:34 david Exp $");
 
 int

@@ -18,6 +18,10 @@ extern "C"
 #define REUSE_ADDR        1
 #define NO_REUSE_ADDR     0
 
+#ifndef INADDR_NONE
+#define INADDR_NONE ((in_addr_t) (-1))
+#endif
+
 int tcp_create_socket(int reuse_addr);
 int tcp_bind_and_listen(int sockfd, unsigned short tcpport);
 int tcp_accept_connection(int sockfd);
